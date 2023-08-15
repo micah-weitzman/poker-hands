@@ -1,3 +1,4 @@
+import { isFunction } from "util"
 
 export const ALL_SUITS = ['D', 'H', 'C', 'S'] as const 
 export const ALL_RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'] as const
@@ -108,18 +109,33 @@ export function compareFlush(a: number[], b:number[]): number {
         } 
     }
     return 0
-    return -1
 }
 
 
 // Calculate Hands
-export function isHighCard(hand: Hand): number {
-    return hand.reduce((acc, v) => Math.max(acc, ALL_RANKS.indexOf(v.rank)), -1)
+export function isHighCard(hand: Hand, numCards: number): number[] {
+    if (numCards >= hand.length) {
+        return []
+    }
+    return hand.sort(sortCardHelper)
+                .reverse()
+                .slice(0, numCards)
+                .map(c => ALL_RANKS.indexOf(c.rank))
 }
-export function isOnePair(hand: Hand): number {
-    return isNKind(hand, 2)    
+export function isOnePair(hand: Hand): [number, number, number, number] | null {
+    const highestPairIndex = isNKind(hand, 2)
+    if (highestPairIndex === -1) {
+        return null
+    }
+    const newHand = hand.filter(c => c.rank !== ALL_RANKS[highestPairIndex])
+    // ensure only 1 pair 
+    if (isNKind(newHand, 2) !== -1 || isNKind(newHand, 3) !== -1) {
+        return null
+    }
+    const [first, second, third] = isHighCard(newHand, 3)
+    return [highestPairIndex, first, second, third]
 }
-export function isTwoPair(hand: Hand): [number, number] | null {
+export function isTwoPair(hand: Hand): [number, number, number] | null {
     let pairs = Object.entries(rankMap(hand))
         .reduce((acc: number[], v) => {
             if (v[1] === 2) {
@@ -132,10 +148,32 @@ export function isTwoPair(hand: Hand): [number, number] | null {
     }
     pairs = pairs.sort((a,b) => a - b)
                  .reverse()
-    return [pairs[0], pairs[1]]
+    
+    const highPairIndex = pairs[0]
+    const lowPairIndex = pairs[1]
+    const highRank = ALL_RANKS[highPairIndex]
+    const lowRank = ALL_RANKS[lowPairIndex]
+    // need to find remaining high card
+    const remainingCards = hand.filter(c => c.rank !== highRank && c.rank !== lowRank)
+    const highCard = isHighCard(remainingCards, 1)[0]
+
+    return [highPairIndex, lowPairIndex, highCard]
 }
-export function isThreeKind(hand: Hand): number {
-    return isNKind(hand, 3)
+export function isThreeKind(hand: Hand): [number, number, number] | null {
+    const threeKindIndex = isNKind(hand, 3)
+    // not 3-kind if there is a pair
+    if (isNKind(hand, 2) !== -1) {
+        return null
+    }
+    const threeKindRank: Rank = ALL_RANKS[threeKindIndex]
+
+    const filteredList = hand.filter(c => c.rank !== threeKindRank)
+                             .sort(sortCardHelper)
+                             .reverse()
+    const firstHighest = ALL_RANKS.indexOf(filteredList[0].rank)
+    const secondHighest = ALL_RANKS.indexOf(filteredList[1].rank) 
+
+    return [threeKindIndex, firstHighest, secondHighest]
 }
 export function isStraight(hand: Hand): number {
     let ranks = hand.sort(sortCardHelper).map(c => ALL_RANKS.indexOf(c.rank))
@@ -174,15 +212,23 @@ export function isFlush(hand: Hand): number[] {
     }, [])
 }
 export function isFullHouse(hand: Hand): [number, number] | null{
-    const three = isThreeKind(hand)
-    const two = isOnePair(hand)
+    const three = isNKind(hand, 3)
+    const two = isNKind(hand, 2)
     if (three !== -1 && two !== -1) {
         return [three, two] 
     }
     return null
 }
-export function isFourKind(hand: Hand): number {
-    return isNKind(hand, 4)
+export function isFourKind(hand: Hand): [number, number] | null {
+    const fourIndex: number = isNKind(hand, 4)
+    if (fourIndex === -1){
+        return null
+    }
+
+    const fourRank: Rank = ALL_RANKS[fourIndex]
+    const filteredHand = hand.filter(c => c.rank != fourRank)
+    const highCard = isHighCard(filteredHand, 1)[0]
+    return [fourIndex, highCard]
 }
 export function isStraightFlush(hand: Hand): number {
     const _is = isStraight(hand)
@@ -197,11 +243,138 @@ export function isRoyalFlush(hand: Hand): boolean {
 
 
 
-
-
-export function bestHands(rawHands: string[]): number {
-    const allHands = rawHands.map(toHand)
-
-    // TODO
-    return -1
+export enum Ranking {
+    HighCard = 1,
+    OnePair,
+    TwoPair,
+    ThreeKind,
+    Straight,
+    Flush,
+    FullHouse,
+    FourKind,
+    StraightFlush,
+    RoyalFlush
 }
+
+export interface HandRank {
+    rank: Ranking,
+    data?: number[] | number
+    index?: number
+}
+
+
+export function handToRank (rawHand: string[]): HandRank {
+    const hand = toHand(rawHand)
+    if (isRoyalFlush(hand)) {
+        return { rank: Ranking.RoyalFlush }
+    }
+    const res = isStraightFlush(hand)
+    if (res !== -1) {
+        return { rank: Ranking.StraightFlush, data: res }
+    }
+    const fk = isFourKind(hand)
+    if (fk) {
+        return { rank: Ranking.FourKind, data: fk! }
+    }
+    const fh = isFullHouse(hand)
+    if (fh) {
+        return { rank: Ranking.FullHouse, data: fh! }
+    }
+    const fl = isFlush(hand)
+    if (fl) {
+        return { rank: Ranking.Flush, data: fl}
+    }
+    const st = isStraight(hand)
+    if (st !== -1) {
+        return { rank: Ranking.Straight, data: st }
+    }
+    const tk = isThreeKind(hand)
+    if (tk) {
+        return { rank: Ranking.ThreeKind, data: tk! }
+    }
+    const tp = isTwoPair(hand)
+    if (tp) {
+        return { rank: Ranking.TwoPair, data: tp! }
+    }
+    const op = isOnePair(hand)
+    if (op) {
+        return { rank: Ranking.OnePair, data: op! }
+    }
+    return { rank: Ranking.HighCard, data: isHighCard(hand, 5) }
+}
+
+
+
+export function compareHands(allRawHands: string[][]): number[] {
+    const allHands = allRawHands.map(h => handToRank(h))
+    const bestRank = allHands.reduce((acc, h) => {
+        return Math.max(acc, h.rank.valueOf())
+    }, -1)
+   
+    const topHands: HandRank[] = []
+    const topHandIndexes: number[] = []
+    allHands.forEach((h, ind) => {
+        if (h.rank.valueOf() === bestRank) {
+            h.index = ind
+            topHands.push(h)
+            topHandIndexes.push(ind)
+        }
+    })
+
+    if (topHandIndexes.length === 1) {
+        return [topHandIndexes[0]]
+    }
+    
+    const rank = Ranking[bestRank]
+
+    if (bestRank === Ranking.RoyalFlush) {
+       return topHandIndexes 
+    }
+    if (bestRank === Ranking.StraightFlush) {
+        const highest = Math.max(...topHands.map(h => h.data as number || -1))
+        const lst: number[] = []
+        return topHands.reduce((acc, h) => {
+            if (h.data === highest && h.index !== undefined) {
+                acc.push(h.index)
+            }
+            return acc
+        }, lst) 
+    }
+    if (bestRank === Ranking.FourKind) {
+        const bestFour: number = Math.max(...topHands.map(h => (h.data as number[])[0]))
+
+        let currPlayers = topHands.filter(h => (h.data as number[])[0] === bestFour)
+        if (currPlayers.length === 1) {
+            return [currPlayers[0].index!]
+        }
+        // check highcard 
+        const highCard: number = Math.max(...currPlayers.map(h => (h.data as number[])[1]))
+
+        return topHands.filter(h => (h.data as number[])[0] === highCard)
+                        .map(h => h.index!)
+    }
+
+    if (bestRank === Ranking.FullHouse) {
+        // check 3kind first
+        const bestThree: number = Math.max(...topHands.map(h => (h.data as number[])[0]))
+        let currPlayers = topHands.filter(h => (h.data as number[])[0] === bestThree)
+        if (currPlayers.length === 1) {
+            return [currPlayers[0].index!]
+        }
+        // check 2kind 
+        const bestTwo: number = Math.max(...currPlayers.map(h => (h.data as number[])[1]))
+
+        return topHands.filter(h => (h.data as number[])[0] === bestTwo)
+            .map(h => h.index!)
+    }
+
+    if (bestRank === Ranking.Flush) {
+        const topHands: number[] = []
+    }
+
+    return []
+}
+
+
+
+

@@ -60,31 +60,38 @@ describe('ToHand', () => {
 
 describe('High Card', () => {
     test('High ace', () => {
-        const hand = pk.toHand(['2D', '9H', 'AS', '5S', '9C', '7H', '8H'])
-        const hc = pk.isHighCard(hand)
-        expect(pk.ALL_RANKS[hc]).toBe('A')
+        const hand = pk.toHand(['2D', 'QH', 'AS', '5S', '9C', '7H', '8H'])
+        const hc = pk.isHighCard(hand, 5)
+        expect(pk.ALL_RANKS[hc[0]]).toBe('A')
+        expect(pk.ALL_RANKS[hc[1]]).toBe('Q')
+        expect(pk.ALL_RANKS[hc[2]]).toBe('9')
+        expect(pk.ALL_RANKS[hc[3]]).toBe('8')
+        expect(pk.ALL_RANKS[hc[4]]).toBe('7')
     })
     test('No highcard', () => {
-        const hc = pk.isHighCard([])
-        expect(hc).toBe(-1)
+        const hc = pk.isHighCard([], 3)
+        expect(hc).toStrictEqual([])
     })
 })
 
 describe('OnePair', () => {
     test('OnePair good', () => {
-        const hand = pk.toHand(['2D', '9H', 'AS', '5S', '9C', '7H', '8H'])
-        expect(pk.isOnePair(hand)).toBe(7) 
+        const hand = pk.toHand(['2D', '9H', 'AS', 'TS', '9C', '7H', '8H'])
+        const res = pk.isOnePair(hand)
+        expect(pk.ALL_RANKS[res![0]]).toBe('9')
+        expect(pk.ALL_RANKS[res![1]]).toBe('A')
+        expect(pk.ALL_RANKS[res![2]]).toBe('T')
+        expect(pk.ALL_RANKS[res![3]]).toBe('8')
     })
     test('OnePair highest', () => {
         const hand = pk.toHand(['2D', '9H', 'AS', '5S', '9C', 'AH', '8H'])
         const highPair = pk.isOnePair(hand) 
-        const textRank = pk.ALL_RANKS[highPair]
-        expect(textRank).toBe('A')
+        expect(highPair).toBeNull()
     })
     test('OnePair no pair', () => {
         const hand = pk.toHand(['2H', '3H', '4H', '5H', '6H', '7H', '8H'])
         const pair = pk.isOnePair(hand)
-        expect(pair).toBe(-1)
+        expect(pair).toBeNull()
     })
 })
 
@@ -94,12 +101,14 @@ describe('TwoPair', () => {
         const res = pk.isTwoPair(hand)
         expect(pk.ALL_RANKS[res![0]]).toBe('9')
         expect(pk.ALL_RANKS[res![1]]).toBe('5')
+        expect(pk.ALL_RANKS[res![2]]).toBe('A')
     })
     test('Two pair with 3 possibile pairs', () => {
-        const hand = pk.toHand(['KD', '9H', '5D', '5S', '9C', 'AH', 'KH'])
+        const hand = pk.toHand(['KD', '9H', '5D', '5S', '9C', 'QH', 'KH'])
         const res = pk.isTwoPair(hand)
         expect(pk.ALL_RANKS[res![0]]).toBe('K')
         expect(pk.ALL_RANKS[res![1]]).toBe('9')
+        expect(pk.ALL_RANKS[res![2]]).toBe('Q') 
     })
     test('Two pair only 1 pair', () => {
         const hand = pk.toHand(['2D', '9H', '4D', '5S', '9C', 'AH', 'KH'])
@@ -120,19 +129,32 @@ describe('Three of a kind', () => {
     test('Three kind good', () => {
         const hand = pk.toHand(['2D', '9H', '9S', '5S', '9C', 'AH', '8H'])
         const threeKind = pk.isThreeKind(hand)
-        const textRank = pk.ALL_RANKS[threeKind]
+        const textRank = pk.ALL_RANKS[threeKind![0]]
+        const highest = pk.ALL_RANKS[threeKind![1]]
+        const nextHighest = pk.ALL_RANKS[threeKind![2]]
         expect(textRank).toBe('9')
+        expect(highest).toBe('A')
+        expect(nextHighest).toBe('8')
     })
     test('Three kind higher', () => {
-        const hand = pk.toHand(['KD', '9H', '9S', 'KS', '9C', 'KH', '8H'])
+        const hand = pk.toHand(['KD', '9H', '9S', 'KS', '9C', 'KH', 'JH'])
         const threeKind = pk.isThreeKind(hand)
-        const textRank = pk.ALL_RANKS[threeKind]
+        const textRank = pk.ALL_RANKS[threeKind![0]]
+        const highest = pk.ALL_RANKS[threeKind![1]]
+        const nextHighest = pk.ALL_RANKS[threeKind![2]]
         expect(textRank).toBe('K')
+        expect(highest).toBe('J')
+        expect(nextHighest).toBe('9')
     })
     test('Three kind none', () => {
         const hand = pk.toHand(['4D', '7H', '9S', 'KS', '9C', 'KH', '8H'])
         const res = pk.isThreeKind(hand)
-        expect(res).toBe(-1)
+        expect(res).toBeNull()
+    })
+    test('Three + Two is null', () => {
+        const hand = pk.toHand(['KD', '6H', '9S', 'KS', '9C', 'KH', 'JH'])
+        const res = pk.isThreeKind(hand)
+        expect(res).toBeNull()
     })
 })
 
@@ -211,13 +233,15 @@ describe('Four of a kind', () => {
     test('Four kind good', () => {
         const hand = pk.toHand(['2D', '9H', '9S', '5S', '9C', '9H', '8H'])
         const res = pk.isFourKind(hand)
-        const textRank = pk.ALL_RANKS[res]
+        const textRank = pk.ALL_RANKS[res![0]]
+        const highCard = pk.ALL_RANKS[res![1]]
         expect(textRank).toBe('9')
+        expect(highCard).toBe('8')
     })
     test('Four kind none', () => {
         const hand = pk.toHand(['KD', '9H', '9S', 'KS', '9C', 'KH', '8H'])
         const res = pk.isFourKind(hand)
-        expect(res).toBe(-1)
+        expect(res).toBeNull()
     })
 })
 
@@ -247,5 +271,40 @@ describe('Royal Flush', () => {
     test('Royal flush wrong', () => {
         const hand = pk.toHand(['KD', 'QS', 'JS', 'TS', 'AS', '2D'])
         expect(pk.isRoyalFlush(hand)).toBe(true)
+    })
+})
+
+describe('Hand to Rank', () => {
+    test('Royal Flush', () => {
+        const hand = ['KS', 'QS', 'JS', 'TS', 'AS', '2D']
+        const handRank = pk.handToRank(hand)
+        expect(handRank).toMatchObject({ rank: pk.Ranking.RoyalFlush })
+    })
+})
+
+describe('Compare Hands', () => {
+    test('royalflush vs highcard', () => {
+        const h1 = ['KS', 'QS', 'JS', 'TS', 'AS', '2D']
+        const h2 = ['2D', '9H', 'AS', 'TS', '9C', '7H', '8H']
+        const hands = [h1, h2]
+        expect(pk.compareHands(hands)[0]).toBe(0)
+
+    })
+    test('compare 2 straight flush', () => {
+        const h1 = ['2S', '3S', '4S', '5S', '6S', 'KD']
+        const h2 = ['3S', '4S', '5S', '6S', '7S', 'KD']
+        const hands = [h1, h2]
+        const res = pk.compareHands(hands)
+        expect(res.length).toBe(1)
+        expect(res[0]).toBe(1)
+    })
+    test('compare 2 straight flush equal', () => {
+        const h1 = ['2S', '3S', '4S', '5S', '6S', 'KD']
+        const h2 = ['2S', '3S', '4S', '5S', '6S', 'KD']
+        const hands = [h1, h2]
+        const res = pk.compareHands(hands)
+        expect(res.length).toBe(2)
+        expect(res).toContain(0)
+        expect(res).toContain(1)
     })
 })
