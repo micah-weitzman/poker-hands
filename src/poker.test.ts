@@ -295,7 +295,7 @@ describe('Compare Hands', () => {
         const h2 = ['3S', '4S', '5S', '6S', '7S', 'KD']
         const hands = [h1, h2]
         const res = pk.compareHands(hands)
-        expect(res.length).toBe(1)
+        expect(res).toHaveLength(1)
         expect(res[0]).toBe(1)
     })
     test('compare 2 straight flush equal', () => {
@@ -306,5 +306,79 @@ describe('Compare Hands', () => {
         expect(res.length).toBe(2)
         expect(res).toContain(0)
         expect(res).toContain(1)
+    })
+    test('Compare equal flush', () => {
+        const h1 = ['4D', '7D', '9D', 'TD', '8D', 'KH', '8H']
+        const h2 = ['4D', '7D', '9D', 'TD', '8D', 'KH', '8H']
+        const res = pk.compareHands([h1, h2])
+        expect(res).toHaveLength(2)
+        expect(res).toContain(1)
+        expect(res).toContain(0)
+    })
+    test('Compare unequal flush', () => {
+        const h1 = ['4D', '6D', '9D', 'TD', '8D', 'KH', '8H']
+        const h2 = ['4D', '7D', '9D', 'TD', '8D', 'KH', '8H']
+        const res = pk.compareHands([h1, h2])
+        expect(res).toHaveLength(1)
+        expect(res).toContain(1)
+    })
+    test('Compare same straight', () => {
+        const h1 = ['2S', '3D', '4H', '5S', '6S', 'KD']
+        const h2 = ['2S', '3D', '4H', '5S', '6S', 'KD']
+        const res = pk.compareHands([h1, h2])
+        expect(res).toHaveLength(2)
+        expect(res).toContain(0)
+        expect(res).toContain(1)
+    })
+    test('Compare different straight', () => {
+        const h1 = ['2S', '3D', '4H', '5S', '6S', 'KD']
+        const h2 = ['3D', '4H', '5S', '6S', '7C', 'KD']
+        const res = pk.compareHands([h1, h2])
+        expect(res).toHaveLength(1)
+        expect(res).toContain(1)
+    })
+    test('Compare same 3 pair', () => {
+        const h1 = ['3D', '3H', '3C', 'AS', '9H', '5D']
+        const h2 = ['3D', '3H', '3C', 'AS', '9H', '5D']
+        const res = pk.compareHands([h1, h2])
+        expect(res).toHaveLength(2)
+        expect(res).toContain(0)
+        expect(res).toContain(1)
+    })
+    test('Compare 3 kind different high cards', () => {
+        const h1 = ['3D', '3H', '3C', 'AS', '9H', '5D']
+        const h2 = ['3D', '3H', '3C', 'AS', '8H', '5D']
+        const res = pk.compareHands([h1, h2])
+        expect(res).toHaveLength(1)
+        expect(res).toContain(0)
+    })
+    test('Compare different 3 kind', () => {
+        const h1 = ['3D', '3H', '3C', 'AS', '9H', '5D']
+        const h2 = ['TD', 'TH', 'TC', 'AS', '8H', '5D']
+        const res = pk.compareHands([h1, h2])
+        expect(res).toHaveLength(1)
+        expect(res).toContain(1)
+    })
+    test('Compare different 2 pair same pair different highcard', () => {
+        const h1 = ['7D', '2H', '7C', '2S', '9H', '5D']
+        const h2 = ['7D', '2H', '7C', '2S', '8H', '5D']
+        const res = pk.compareHands([h1, h2])
+        expect(res).toHaveLength(1)
+        expect(res).toContain(0)
+    })
+    test('Compare different 2 pair', () => {
+        const h1 = ['7D', 'TH', '7C', 'TS', '9H', '5D']
+        const h2 = ['7D', '2H', '7C', '2S', '8H', '5D']
+        const res = pk.compareHands([h1, h2])
+        expect(res).toHaveLength(1)
+        expect(res).toContain(0)
+    })
+    test('Compare 1 pair', () => {
+        const h1 = ['2D', 'TH', '2C', '3S', '9H', '5D']
+        const h2 = ['TD', '2H', 'TC', '9S', '8H', '5D']
+        const h3 = ['TD', '2H', 'TC', '9S', 'AH', '5D']
+        const res = pk.compareHands([h1, h2, h3])
+        expect(res).toHaveLength(1)
+        expect(res).toContain(2)
     })
 })

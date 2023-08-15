@@ -1,4 +1,3 @@
-import { isFunction } from "util"
 
 export const ALL_SUITS = ['D', 'H', 'C', 'S'] as const 
 export const ALL_RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'] as const
@@ -127,7 +126,7 @@ export function isOnePair(hand: Hand): [number, number, number, number] | null {
     if (highestPairIndex === -1) {
         return null
     }
-    const newHand = hand.filter(c => c.rank !== ALL_RANKS[highestPairIndex])
+    const newHand = hand.filter(c => c.rank !== ALL_RANKS[highestPairIndex] )
     // ensure only 1 pair 
     if (isNKind(newHand, 2) !== -1 || isNKind(newHand, 3) !== -1) {
         return null
@@ -281,7 +280,7 @@ export function handToRank (rawHand: string[]): HandRank {
         return { rank: Ranking.FullHouse, data: fh! }
     }
     const fl = isFlush(hand)
-    if (fl) {
+    if (fl.length) {
         return { rank: Ranking.Flush, data: fl}
     }
     const st = isStraight(hand)
@@ -303,9 +302,17 @@ export function handToRank (rawHand: string[]): HandRank {
     return { rank: Ranking.HighCard, data: isHighCard(hand, 5) }
 }
 
-
+const arrSort = (a: number[] , b: number[]) => {
+    for (let i=0; i<a.length && i<b.length; i++) {
+        if (a[i]!==b[i]){
+            return a[i]-b[i]
+        }
+    }
+   return a.length-b.length
+}
 
 export function compareHands(allRawHands: string[][]): number[] {
+    // TODO: need to tidy up this function 
     const allHands = allRawHands.map(h => handToRank(h))
     const bestRank = allHands.reduce((acc, h) => {
         return Math.max(acc, h.rank.valueOf())
@@ -369,12 +376,43 @@ export function compareHands(allRawHands: string[][]): number[] {
     }
 
     if (bestRank === Ranking.Flush) {
-        const topHands: number[] = []
+        const sortedHands = topHands.map(h => h.data as number[]).sort(arrSort).reverse()
+        const best = sortedHands[0]
+        return topHands.filter(h => JSON.stringify(h.data) === JSON.stringify(best))
+                        .map(h => h.index!)
     }
 
-    return []
-}
+    if (bestRank === Ranking.Straight) {
+        const highCard = Math.max(...topHands.map(h => h.data as number))
+        return topHands.filter(h => h.data === highCard)
+                        .map(h => h.index!)
+    }
 
+    if (bestRank === Ranking.ThreeKind) {
+        const sortedHands = topHands.map(h => h.data as number[]).sort(arrSort).reverse()
+        const best = sortedHands[0]
+        return topHands.filter(h => JSON.stringify(h.data) === JSON.stringify(best))
+                        .map(h => h.index!)
+    }
+
+    if (bestRank === Ranking.TwoPair) {
+        const sortedHands = topHands.map(h => h.data as number[]).sort(arrSort).reverse()
+        const best = sortedHands[0]
+        return topHands.filter(h => JSON.stringify(h.data) === JSON.stringify(best))
+                        .map(h => h.index!)
+    }
+    if (bestRank === Ranking.OnePair) {
+        const sortedHands = topHands.map(h => h.data as number[]).sort(arrSort).reverse()
+        const best = sortedHands[0]
+        return topHands.filter(h => JSON.stringify(h.data) === JSON.stringify(best))
+                        .map(h => h.index!)
+    }
+    
+    const sortedHands = topHands.map(h => h.data as number[]).sort(arrSort).reverse()
+    const best = sortedHands[0]
+    return topHands.filter(h => JSON.stringify(h.data) === JSON.stringify(best))
+                    .map(h => h.index!)
+}
 
 
 
