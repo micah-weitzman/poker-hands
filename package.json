@@ -1,27 +1,28 @@
 {
   "name": "poker-hands",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Analize and compare standard poker hands",
+  "main": "./build/poker.ts",
   "scripts": {
-    "start:dev": "npx nodemon",
+    "clean": "rm -rf ./build",
+    "build": "tsc --build",
     "test": "jest"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mikachoow21/poker-hands.git"
   },
-  "author": "",
+  "author": "Micah Weitzman",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/mikachoow21/poker-hands/issues"
   },
   "homepage": "https://github.com/mikachoow21/poker-hands#readme",
+  "keywords": ["poker", "texas holdem", "typescript", "no-dependencies"],
   "devDependencies": {
     "@jest/globals": "^29.6.2",
     "@types/node": "^20.4.9",
     "jest": "^29.6.2",
-    "nodemon": "^3.0.1",
     "ts-jest": "^29.1.1",
     "ts-node": "^10.9.1",
     "typescript": "^5.1.6"
